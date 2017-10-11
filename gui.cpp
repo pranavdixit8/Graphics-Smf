@@ -15,6 +15,8 @@
 #include <GL/glut.h>
 #endif
 
+//using namespace std;
+
 float xy_aspect;
 int   last_x, last_y;
 float rotationX = 0.0, rotationY = 0.0;
@@ -22,8 +24,7 @@ float rotationX = 0.0, rotationY = 0.0;
 /** These are the live variables passed into GLUI ***/
 int   wireframe = 0;
 int   obj_type = 1;
-int   segments = 8;
-int   segments2 = 8;
+int   segments = 40;
 int   light0_enabled = 1;
 int   light1_enabled = 1;
 
@@ -83,6 +84,302 @@ GLfloat light1_position[] = {-1.0f, -1.0f, 1.0f, 0.0f};
 
 GLfloat lights_rotation[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
+
+/* 
+SMF file handling and loading
+*/
+
+class Smf {
+
+private:
+
+  bool getEdgeList();
+  bool getNormalList();
+
+
+public:
+
+std::vector<std::vector<GLfloat>> vertices,
+
+std::vector<std::vector<vector<size_t>> faces;
+
+std::vector <std::pair<size_t,size_t>> edges;
+
+std::map<size_t, std::vector<GLfloat> > face_normals;
+
+std::map<size_t, std::vector<GLfloat> > vertex_normals;
+
+friend std::ostream& operator<< (std::ostream& os, const Smf& smf);
+Smf(std::string &file){
+}
+
+bool load(std::string &file);
+bool save(std::string &file);
+
+}
+
+std::ostream& operator<< (std::ostream& os, const SmfModel& smf)
+{
+
+for(std::vector<std::vector<GLfloat>>::const_iterator i = smf.vertices.begin();i != smf.vertices.end(); i++){
+
+  os << "v ";
+
+  for( std::vector<GLfloat>::const_iterator j  = i.begin(); j != i.end(); j++){
+
+    os << *j << " ";
+
+  }
+
+  os << std::endl;
+
+}
+
+for( std::vector<std::vector<size_t>>::const_iterator i = smf.faces.begin(); i! = smf.faces.end(); i++){
+
+  os << "f ";
+
+  for( std::vector<size_t>::const_iterator j = i.begin(); j!= i.end(); j++){
+
+    os << *j << " ";
+
+  }
+
+  os << std::endl;
+}
+
+
+for( std::set<std::pair<size_t,size_t>>::const_iterator i = smf.edges.begin(); i! = smf.edges.end(); i++){
+
+  os << "e "<< i -> first << " " << i -> second << std::endl;
+}
+
+
+return os;
+
+}
+
+bool Smf::load(std::string &file)
+
+{
+
+  std::ifstream stream( file.c_str());
+
+  if(!stream){
+
+  cout<< " Error occured while opening the file";
+
+    return false;
+  }
+
+  else{
+
+    vertices.clear();
+    faces.clear();
+  }
+
+std::string l;
+
+while(std::getline(stream, l)){
+
+if(l.size()<){
+  continue;
+}
+
+std::istringstream iss(l.substr(1));
+
+std::vector<GLfloat> vertex(3);
+std::vector<size_t> face(3);
+std::vector<GLfloat> diff01(3);
+std::vector<GLfloat> diff12(3);
+std::vector<GLfloat> normal(3);
+GLfloat length;
+
+switch(l[0]){
+
+  case "v":
+
+  iss>> vertex[0]>>vertex[1]>>vertex[2];
+  vertices.push_back(vertex);
+  break;
+
+  case "f":
+
+  iss>> face[0]>>face[1] >>face[2];
+  faces.push_back(face);
+
+  for(int j =0; j<3;j++){
+
+    diff01 = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
+    diff12 = vertices[face[2]-1][j]- vertices[face[1]-1][j];
+
+  }
+
+  normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
+  normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
+  normal[0] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
+  break;
+
+  length = std::sqrt(pow(normal[0],2)+pow(normal[1],2)+pow(normal[2],2));
+
+  for (int i = 0 ; i < 3; i++){
+    normal[i]/=length;
+  }
+  face_normals.insert(std::make_pair(faces.size()-1,normal));
+
+  for(int i = 0; i<3, i++){
+
+    if( vertex_normals.find(face[i]) == vertex_normals.end())
+
+      vertex_normals[face[j]] = normal;
+  else{
+
+    for(int j = 0; j<3;j++){
+
+      vertex_normals[face[j]][k] += normal[k];
+    }
+  }
+}
+  break;
+  case "#":
+    break;
+
+  }
+
+
+}
+
+stream.close();
+
+getEdgeList();
+
+return true;
+
+}
+
+
+bool Smf::save(std::string &file){
+
+
+  std::fstream f;
+
+  f.open(file.c_str(), std::ios_base::out | std::ios_base::in);
+
+  if(f.is_open())
+  {
+    std::cerr<< "File already exists, Please choose a different name";
+
+    f.close();
+  }
+  else{
+
+    f.clear();
+
+    f.open(file.c_str(), std::ios_base::out);
+
+    for( std::vector<std::vector<GLfloat>>::iterator i = vertices.begin(); i!= vertices.end(); i++){
+
+      f << "v";
+
+      for(std::vector<GLfloat>:: iterator j = i->begin(); j!= i->end(); j++){
+        f << " " << *j;
+
+      }
+      f <<std::endl; 
+
+
+    }
+
+    for( std::vector<std::vector<size_t>>::iterator i = faces.begin(); i!= faces.end(); i++){
+
+      f << "f";
+
+      for( std::vector<size_t>::iterator j = i->begin(); j!= i->end(); j++){
+
+        f << " "<<*j;
+      }
+
+      f<<std::endl;
+    }
+
+  }
+
+  f.close();
+}
+
+
+
+bool Smf::display(){
+
+glBegin(GL_TRIANGLES);
+
+for(int i = 0 ; i< faces.size(); i++){
+
+
+  for( int j = 0 ; j < faces[i].size(); j++){
+
+    std::vector<GLfloat> normal;
+
+    switch(curr_string){
+
+      case 0: 
+      normal = face_normals[i];
+      break;
+
+      default: 
+      normal = vertex_normals[i];
+      break;
+    }
+
+    glNormal3f(normal[0],normal[1],normal[2]);
+    glVertex3f(vertices[faces[i][j] - 1][0],vertices[faces[i][j] - 1][1],vertices[faces[i][j] - 1][2]);
+
+  }
+}
+
+glEnd();
+
+return true;
+
+}
+
+void Smf:: getEdgeList()
+{
+
+  edges.clear();
+
+  for(std::vector<std::vector<size_t>>::iterator i = faces.begin(); i!= faces.end(); i++){
+
+    for(++ std::std::vector<std::vector<size_t>>::iterator j =i.begin(); j!= i.end(); j++){
+      
+
+      if( *(j-1) < *j){
+
+        edges.insert(std::make_pair(*(j-1),*j));
+
+      }
+    }
+
+      if( i->back()< i-> front())
+      {
+
+        edges.insert(std::make_pair(i->back(),i->front()));
+
+      }
+    }
+
+    return;
+  }
+
+
+
+
+
+
+
+
+
+
 /**************************************** control_cb() *******************/
 /* GLUI control callback                                                 */
 
@@ -115,7 +412,6 @@ if(control == SHADDING_ID){
 
       }
     }
-
 
   if ( control == LIGHT0_ENABLED_ID ) {
     if ( light0_enabled ) {
@@ -331,7 +627,7 @@ void myGlutDisplay()
     updated by GLUI ***/
 
   glPushMatrix();
-  glTranslatef( .5, 0.0, 0.0 );
+  glTranslatef( 0.0, -0.25, 0.0 );
   glMultMatrixf( torus_rotate );
 
   if(show_torus){
@@ -366,8 +662,6 @@ void myGlutDisplay()
       }
 
   }
-
-
   if ( show_axes )
     draw_axes(.52f);
   glPopMatrix();
@@ -468,46 +762,6 @@ int main(int argc, char* argv[])
   scale_spinner->set_alignment( GLUI_ALIGN_RIGHT );
 
 
-  // /******** Add some controls for lights ********/
-
-  // GLUI_Rollout *roll_lights = new GLUI_Rollout(glui, "Lights", false );
-
-  // GLUI_Panel *light0 = new GLUI_Panel( roll_lights, "Light 1" );
-  // GLUI_Panel *light1 = new GLUI_Panel( roll_lights, "Light 2" );
-
-  // new GLUI_Checkbox( light0, "Enabled", &light0_enabled,
-  //                    LIGHT0_ENABLED_ID, control_cb );
-  // light0_spinner = 
-  //   new GLUI_Spinner( light0, "Intensity:", 
-  //                     &light0_intensity, LIGHT0_INTENSITY_ID,
-  //                     control_cb );
-  // light0_spinner->set_float_limits( 0.0, 1.0 );
-  // GLUI_Scrollbar *sb;
-  // sb = new GLUI_Scrollbar( light0, "Red",GLUI_SCROLL_HORIZONTAL,
-  //                          &light0_diffuse[0],LIGHT0_INTENSITY_ID,control_cb);
-  // sb->set_float_limits(0,1);
-  // sb = new GLUI_Scrollbar( light0, "Green",GLUI_SCROLL_HORIZONTAL,
-  //                          &light0_diffuse[1],LIGHT0_INTENSITY_ID,control_cb);
-  // sb->set_float_limits(0,1);
-  // sb = new GLUI_Scrollbar( light0, "Blue",GLUI_SCROLL_HORIZONTAL,
-  //                          &light0_diffuse[2],LIGHT0_INTENSITY_ID,control_cb);
-  // sb->set_float_limits(0,1);
-  // new GLUI_Checkbox( light1, "Enabled", &light1_enabled,
-  //                    LIGHT1_ENABLED_ID, control_cb );
-  // light1_spinner = 
-  //   new GLUI_Spinner( light1, "Intensity:",
-  //                     &light1_intensity, LIGHT1_INTENSITY_ID,
-  //                     control_cb );
-  // light1_spinner->set_float_limits( 0.0, 1.0 );
-  // sb = new GLUI_Scrollbar( light1, "Red",GLUI_SCROLL_HORIZONTAL,
-  //                          &light1_diffuse[0],LIGHT1_INTENSITY_ID,control_cb);
-  // sb->set_float_limits(0,1);
-  // sb = new GLUI_Scrollbar( light1, "Green",GLUI_SCROLL_HORIZONTAL,
-  //                          &light1_diffuse[1],LIGHT1_INTENSITY_ID,control_cb);
-  // sb->set_float_limits(0,1);
-  // sb = new GLUI_Scrollbar( light1, "Blue",GLUI_SCROLL_HORIZONTAL,
-  //                          &light1_diffuse[2],LIGHT1_INTENSITY_ID,control_cb);
-  // sb->set_float_limits(0,1);
 
 
   // /*** Add another rollout ***/
