@@ -1,15 +1,10 @@
 /****************************************************************************
 
-  example5.cpp
-
-  A GLUI program demonstrating subwindows, rotation controls,
-  translation controls, and listboxes
-
-  -----------------------------------------------------------------------
-     
-  7/10/98 Paul Rademacher (rademach@cs.unc.edu)
+ //Adapted from example 5 of the Glui setup ---------------Pranav Dixit
 
 ****************************************************************************/
+
+
 
 #include <string.h>
 #include <GL/glui.h>
@@ -73,6 +68,7 @@ GLUI_Panel      *obj_panel;
 #define DISABLE_ID           301
 #define SHOW_ID              302
 #define HIDE_ID              303
+#define SHADDING_ID          304
 
 
 /********** Miscellaneous global variables **********/
@@ -92,6 +88,35 @@ GLfloat lights_rotation[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
 void control_cb( int control )
 {
+
+if(control == SHADDING_ID){
+  switch (curr_string){
+
+        //flat shaded
+        case 0 : 
+                glShadeModel(GL_FLAT);
+                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                break;
+        //smooth shaded
+        case 1 : 
+                glShadeModel(GL_SMOOTH);
+                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                break;
+        //wireframe
+        case 2: 
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+                break;
+        //shaded with mesh
+        case 3:
+                glShadeModel(GL_SMOOTH);
+                glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+                
+
+      }
+    }
+
+
   if ( control == LIGHT0_ENABLED_ID ) {
     if ( light0_enabled ) {
       glEnable( GL_LIGHT0 );
@@ -150,6 +175,8 @@ void control_cb( int control )
   {
     glui2->hide();
   }
+
+
 //   else if (control == open_file)
 //   {
 //     strcpy(open_filename,"mesh/");
@@ -300,44 +327,47 @@ void myGlutDisplay()
 
   glScalef( scale, scale, scale );
 
-  /*** Now we render object, using the variables 'obj_type', 'segments', and
-    'wireframe'.  These are _live_ variables, which are transparently 
+  /***   These are _live_ variables, which are transparently 
     updated by GLUI ***/
-
-  // glPushMatrix();
-  // glTranslatef( -.5, 0.0, 0.0 );
-  // glMultMatrixf( sphere_rotate );
-  // if ( wireframe && show_sphere)
-  //   glutWireSphere( .4, segments, segments );
-  // else if ( show_sphere )
-  //   glutSolidSphere( .4, segments, segments );
-  // if ( show_axes )
-  //   draw_axes(.52f);
-  // glPopMatrix();
 
   glPushMatrix();
   glTranslatef( .5, 0.0, 0.0 );
   glMultMatrixf( torus_rotate );
-  if (curr_string==2 && show_torus )
-    // glutWireTorus( .15,.3,16,segments );
-  {
+
+  if(show_torus){
+
     glutSolidTorus( .15,.3,16,segments );
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glShadeModel(GL_FLAT);
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+     switch (curr_string){
+
+        //flat shaded
+        case 0 : 
+                glShadeModel(GL_FLAT);
+                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                break;
+        //smooth shaded
+        case 1 : 
+                glShadeModel(GL_SMOOTH);
+                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                break;
+        //wireframe
+        case 2: 
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+                break;
+        //shaded with mesh
+        case 3:
+                glShadeModel(GL_SMOOTH);
+                glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+
+      }
+
   }
-  else if ( curr_string==0 && show_torus )
-    glutSolidTorus( .15,.3,16,segments );
-  else if ( curr_string==1 && show_torus )
-    {
-      glutSolidTorus( .15,.3,16,segments );
-      glShadeModel(GL_SMOOTH);
-      glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-    }
-  else if ( curr_string==3 && show_torus )
-    {
-      glutSolidTorus( .15,.3,16,segments );
-      glShadeModel(GL_FLAT);
-      glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-    }
+
+
   if ( show_axes )
     draw_axes(.52f);
   glPopMatrix();
@@ -426,7 +456,7 @@ int main(int argc, char* argv[])
 
   /***** Control for object params *****/
 
-  new GLUI_Checkbox( glui, "Wireframe", &wireframe, 1, control_cb );
+  // new GLUI_Checkbox( glui, "Wireframe", &wireframe, 1, control_cb );
   GLUI_Spinner *spinner = 
     new GLUI_Spinner( glui, "Segments:", &segments);
   spinner->set_int_limits( 3, 60 );
@@ -489,7 +519,7 @@ int main(int argc, char* argv[])
 
   /**** Add listbox ****/
   new GLUI_StaticText( glui, "" );
-  GLUI_Listbox *list = new GLUI_Listbox( glui, "Mesh Options", &curr_string );
+  GLUI_Listbox *list = new GLUI_Listbox( glui, "Mesh Options", &curr_string,SHADDING_ID,control_cb );
   int i;
   for( i=0; i<4; i++ )
     list->add_item( i, string_list[i] );
