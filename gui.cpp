@@ -7,6 +7,13 @@
 
 
 #include <string.h>
+#include <iostream>
+#include <cmath>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <set>
+#include <map>
 #include <GL/glui.h>
 
 #ifdef __APPLE__
@@ -15,7 +22,42 @@
 #include <GL/glut.h>
 #endif
 
+//#define _GLIBCXX_USE_CXX11_ABI 0
+
 //using namespace std;
+
+class Smf {
+
+private:
+
+  void getEdgeList();
+
+
+public:
+
+std::vector<std::vector<GLfloat> > vertices;
+
+std::vector<std::vector<size_t> > faces;
+
+std::set <std::pair<size_t,size_t> > edges;
+
+std::map<size_t, std::vector<GLfloat> > face_normals;
+
+std::map<size_t, std::vector<GLfloat> > vertex_normals;
+
+friend std::ostream& operator<< (std::ostream& os, const Smf& smf);
+Smf(const std::string &file= std::string());
+
+bool loadFile(const std::string &file);
+bool saveFile(const std::string &file);
+
+bool display();
+
+};
+
+
+
+
 
 float xy_aspect;
 int   last_x, last_y;
@@ -28,16 +70,16 @@ int   segments = 40;
 int   light0_enabled = 1;
 int   light1_enabled = 1;
 
-int open_file = 1;
-int output_file=1;
-int load_mesh = 0;
-int save_file = 0;
+int OPEN_FILE = 1;
+int OUTPUT_FILE=1;
+int LOAD_MESH= 0;
+int SAVE_FILE= 0;
 
-// char open_filetext[sizeOf(GLUI_String)] = "sphere";
-// char save_filetext[sizeOf(GLUI_String)] = "";
+char open_filetext[sizeof(GLUI_String)] = "wheel";
+char save_filetext[sizeof(GLUI_String)] = "";
 
-// char open_filename[] = "mesh/sphere.smf";
-// char save_filename[] = "";
+char open_filename[] = "../mesh/wheel.smf";
+char save_filename[] = "";
 
 float light0_intensity = 1.0;
 float light1_intensity = .4;
@@ -53,6 +95,10 @@ float view_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 float obj_pos[] = { 0.0, 0.0, 0.0 };
 const char *string_list[] = { "flat shaded", "smooth shaded", "wireframe", "shaded with mesh" };
 int   curr_string = 0;
+
+// ~Smf();
+
+static Smf smf(open_filename);
 
 /** Pointers to the windows and some of the controls we'll create **/
 GLUI *glui, *glui2;
@@ -85,47 +131,26 @@ GLfloat light1_position[] = {-1.0f, -1.0f, 1.0f, 0.0f};
 GLfloat lights_rotation[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
 
+
+
+
 /* 
 SMF file handling and loading
 */
+/*
+Smf functions definitions
 
-class Smf {
-
-private:
-
-  bool getEdgeList();
-  bool getNormalList();
+*/
 
 
-public:
-
-std::vector<std::vector<GLfloat>> vertices,
-
-std::vector<std::vector<vector<size_t>> faces;
-
-std::vector <std::pair<size_t,size_t>> edges;
-
-std::map<size_t, std::vector<GLfloat> > face_normals;
-
-std::map<size_t, std::vector<GLfloat> > vertex_normals;
-
-friend std::ostream& operator<< (std::ostream& os, const Smf& smf);
-Smf(std::string &file){
-}
-
-bool load(std::string &file);
-bool save(std::string &file);
-
-}
-
-std::ostream& operator<< (std::ostream& os, const SmfModel& smf)
+std::ostream& operator<< (std::ostream& os, const Smf& smf)
 {
 
-for(std::vector<std::vector<GLfloat>>::const_iterator i = smf.vertices.begin();i != smf.vertices.end(); i++){
+for(std::vector<std::vector<GLfloat>>::const_iterator i = smf.vertices.begin();i!= smf.vertices.end(); i++){
 
   os << "v ";
 
-  for( std::vector<GLfloat>::const_iterator j  = i.begin(); j != i.end(); j++){
+  for( std::vector<GLfloat>::const_iterator j  = i->begin(); j != i->end(); j++){
 
     os << *j << " ";
 
@@ -135,11 +160,11 @@ for(std::vector<std::vector<GLfloat>>::const_iterator i = smf.vertices.begin();i
 
 }
 
-for( std::vector<std::vector<size_t>>::const_iterator i = smf.faces.begin(); i! = smf.faces.end(); i++){
+for( std::vector<std::vector<size_t>>::const_iterator i = smf.faces.begin(); i != smf.faces.end(); i++){
 
   os << "f ";
 
-  for( std::vector<size_t>::const_iterator j = i.begin(); j!= i.end(); j++){
+  for( std::vector<size_t>::const_iterator j = i->begin(); j != i->end(); j++){
 
     os << *j << " ";
 
@@ -149,9 +174,35 @@ for( std::vector<std::vector<size_t>>::const_iterator i = smf.faces.begin(); i! 
 }
 
 
-for( std::set<std::pair<size_t,size_t>>::const_iterator i = smf.edges.begin(); i! = smf.edges.end(); i++){
+  for(std::map<size_t,std::vector<GLfloat> >::const_iterator i = smf.vertex_normals.begin();i!= smf.vertex_normals.end(); i++){
 
-  os << "e "<< i -> first << " " << i -> second << std::endl;
+  os << "vn ";
+
+  for( std::vector<GLfloat>::const_iterator j  = i->second.begin(); j != i->second.end(); j++){
+
+    os << *j << " ";
+
+  }
+
+  os << std::endl;
+}
+
+for(std::map<size_t,std::vector<GLfloat>>::const_iterator i = smf.face_normals.begin();i!= smf.face_normals.end(); i++){
+
+  os << "fn";
+
+  for( std::vector<GLfloat>::const_iterator j  = i->second.begin(); j != i->second.end(); j++){
+
+    os << *j << " ";
+
+  }
+
+  os<<std::endl;
+}
+
+for( std::set<std::pair<size_t,size_t> >::const_iterator i = smf.edges.begin(); i != smf.edges.end(); i++){
+
+  os << "e "<< i->first << " " << i->second << std::endl;
 }
 
 
@@ -159,30 +210,36 @@ return os;
 
 }
 
-bool Smf::load(std::string &file)
+bool Smf::loadFile(const std::string &file)
 
 {
 
-  std::ifstream stream( file.c_str());
+  std::ifstream ifile(file.c_str());
 
-  if(!stream){
+  if(!ifile){
 
-  cout<< " Error occured while opening the file";
+  std::cout<< " Error occured while opening the file";
 
     return false;
   }
 
   else{
 
+    std::cout<<"clear data5";
+
     vertices.clear();
     faces.clear();
+
+    face_normals.clear();
+
+    vertex_normals.clear();
   }
 
 std::string l;
 
-while(std::getline(stream, l)){
+while(std::getline(ifile, l)){
 
-if(l.size()<){
+if(l.size()< 1 ){
   continue;
 }
 
@@ -197,59 +254,67 @@ GLfloat length;
 
 switch(l[0]){
 
-  case "v":
+  case 'v':
 
   iss>> vertex[0]>>vertex[1]>>vertex[2];
   vertices.push_back(vertex);
   break;
 
-  case "f":
+  case 'f':
 
   iss>> face[0]>>face[1] >>face[2];
   faces.push_back(face);
 
   for(int j =0; j<3;j++){
 
-    diff01 = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
-    diff12 = vertices[face[2]-1][j]- vertices[face[1]-1][j];
+    diff01[j] = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
+    diff12[j] = vertices[face[2]-1][j]- vertices[face[1]-1][j];
+
 
   }
 
   normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
   normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
-  normal[0] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
-  break;
+  normal[2] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
+  // break;
 
-  length = std::sqrt(pow(normal[0],2)+pow(normal[1],2)+pow(normal[2],2));
+  length = std::sqrt(std::pow(normal[0],2)+std::pow(normal[1],2)+std::pow(normal[2],2));
 
   for (int i = 0 ; i < 3; i++){
     normal[i]/=length;
   }
-  face_normals.insert(std::make_pair(faces.size()-1,normal));
+ 
+  face_normals.insert(std::make_pair((faces.size()-1),normal));
 
-  for(int i = 0; i<3, i++){
+
+
+  for(int i = 0; i<3; i++){
 
     if( vertex_normals.find(face[i]) == vertex_normals.end())
 
-      vertex_normals[face[j]] = normal;
+      vertex_normals[face[i]] = normal;
   else{
 
     for(int j = 0; j<3;j++){
 
-      vertex_normals[face[j]][k] += normal[k];
+      vertex_normals[face[i]][j] += normal[j];
     }
   }
 }
   break;
-  case "#":
+  case '#':
     break;
+
+  default:
+
+  break;
 
   }
 
 
 }
 
-stream.close();
+ifile.close();
 
 getEdgeList();
 
@@ -258,7 +323,7 @@ return true;
 }
 
 
-bool Smf::save(std::string &file){
+bool Smf::saveFile(const std::string &file){
 
 
   std::fstream f;
@@ -309,16 +374,115 @@ bool Smf::save(std::string &file){
 
 
 
+// bool Smf::display(){
+
+//   // glClearColor( .9f, .9f, .9f, 1.0f );
+
+// glBegin(GL_TRIANGLES);
+
+// for(size_t i = 0 ; i< 10; i++){
+
+//   if (faces[i].size() < 3 || vertices[ faces[i][0] ].size() < 3 || vertices[ faces[i][1] ].size() < 3 || vertices[ faces[i][2] ].size() < 3)
+//     {
+//       continue;
+//     }
+
+
+//   for( size_t j = 0 ; j < faces[i].size(); j++){
+
+//     if (vertices[ faces[i][j] ].size() < 3)
+//       {
+//         continue;
+//       }
+
+//     std::vector<GLfloat> normal;
+
+//     // // curr_string = 0;
+//     // std::cout<< "\nvalue:value:"<<face_normals.size()<<"\n";
+
+//     // normal = face_normals[i];
+
+//     //  for (unsigned m=0; m<3 ; ++m)
+//     // {std::cout << ' ' << normal[m];
+//     // std::cout << '\n';
+//     // }
+
+//     switch(curr_string){
+
+//       case 0: 
+//       normal = face_normals[i];
+//       break;
+
+//       default: 
+//       normal = vertex_normals[faces[i][j]];
+//       break;
+//     }
+
+   
+
+//     // normalize it to one
+//       GLfloat length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+//       for (size_t k = 0; k < 3; ++ k)
+//       {
+//         normal[k] /= length;
+//       }
+//     // glBegin(GL_TRIANGLES);
+//     // glNormal3f(normal[0],normal[1],normal[2]);
+
+//     // glNormal3fv(normal);
+
+//     // std::cout<<"normal0:"<<normal[0]<<"\n";
+
+//     std::cout << "vertices size: "<<vertices.size()<< "faces size: "<<faces.size();
+
+//     glVertex3f(vertices[faces[i][j] - 1][0],vertices[faces[i][j] - 1][1],vertices[faces[i][j] - 1][2]);
+
+  
+//     // glEnd();
+//     // std::cout<<"vertices0:"<<vertices[faces[i][j] - 1][0]<<"\n";
+
+//   }
+
+//   }
+
+// glEnd();
+
+// return true;
+
+// }
+
 bool Smf::display(){
+
+  // glClearColor( .9f, .9f, .9f, 1.0f );
 
 glBegin(GL_TRIANGLES);
 
-for(int i = 0 ; i< faces.size(); i++){
+for(size_t i = 0 ; i< faces.size(); i++){
+
+  if (faces[i].size() < 3 || vertices[ faces[i][0] ].size() < 3 || vertices[ faces[i][1] ].size() < 3 || vertices[ faces[i][2] ].size() < 3)
+    {
+      continue;
+    }
 
 
-  for( int j = 0 ; j < faces[i].size(); j++){
+  for( size_t j = 0 ; j < faces[i].size(); j++){
+
+    if (vertices[ faces[i][j] ].size() < 3)
+      {
+        continue;
+      }
 
     std::vector<GLfloat> normal;
+
+    // // curr_string = 0;
+    // std::cout<< "\nvalue:value:"<<face_normals.size()<<"\n";
+
+    // normal = face_normals[i];
+
+    //  for (unsigned m=0; m<3 ; ++m)
+    // {std::cout << ' ' << normal[m];
+    // std::cout << '\n';
+    // }
 
     switch(curr_string){
 
@@ -327,15 +491,36 @@ for(int i = 0 ; i< faces.size(); i++){
       break;
 
       default: 
-      normal = vertex_normals[i];
+      normal = vertex_normals[faces[i][j]];
       break;
     }
 
-    glNormal3f(normal[0],normal[1],normal[2]);
+   
+
+    // normalize it to one
+      GLfloat length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+      for (size_t k = 0; k < 3; ++ k)
+      {
+        normal[k] /= length;
+      }
+    // glBegin(GL_TRIANGLES);
+    // glNormal3f(normal[0],normal[1],normal[2]);
+
+    // glNormal3fv(normal);
+
+    // std::cout<<"normal0:"<<normal[0]<<"\n";
+
+    std::cout << "vertices size: "<<vertices.size()<< "faces size: "<<faces.size();
+
     glVertex3f(vertices[faces[i][j] - 1][0],vertices[faces[i][j] - 1][1],vertices[faces[i][j] - 1][2]);
 
+  
+    // glEnd();
+    // std::cout<<"vertices0:"<<vertices[faces[i][j] - 1][0]<<"\n";
+
   }
-}
+
+  }
 
 glEnd();
 
@@ -343,14 +528,24 @@ return true;
 
 }
 
+
+
+
+
+
 void Smf:: getEdgeList()
 {
 
   edges.clear();
 
-  for(std::vector<std::vector<size_t>>::iterator i = faces.begin(); i!= faces.end(); i++){
+  for(std::vector<std::vector<size_t>>::iterator i = faces.begin(); i!= faces.end(); i++)
 
-    for(++ std::std::vector<std::vector<size_t>>::iterator j =i.begin(); j!= i.end(); j++){
+  {
+
+
+      std::vector<size_t>::iterator j =i->begin();
+
+    for(++j; j!= i->end(); j++){
       
 
       if( *(j-1) < *j){
@@ -362,10 +557,11 @@ void Smf:: getEdgeList()
 
       if( i->back()< i-> front())
       {
-
-        edges.insert(std::make_pair(i->back(),i->front()));
+      
+        edges.insert(std::make_pair(i->back(), i->front()));
 
       }
+
     }
 
     return;
@@ -373,9 +569,24 @@ void Smf:: getEdgeList()
 
 
 
+Smf::Smf(const std::string &file){
+
+  if(file.length()==0){
+
+    return;
+  }
+  // ~Smf();
+  this->loadFile(file);
+
+}
 
 
 
+
+/* End of Smf class definitions and functions
+
+
+*/
 
 
 
@@ -393,11 +604,13 @@ if(control == SHADDING_ID){
         case 0 : 
                 glShadeModel(GL_FLAT);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                smf.display();
                 break;
         //smooth shaded
         case 1 : 
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                smf.display();
                 break;
         //wireframe
         case 2: 
@@ -473,31 +686,30 @@ if(control == SHADDING_ID){
   }
 
 
-//   else if (control == open_file)
-//   {
-//     strcpy(open_filename,"mesh/");
-//     strcat(open_filename,open_filetext);
-//     strcat(open_filename,".smf")
-//   }
-//   else if (control == load_mesh)
-//   {
-// smf_model.loadFile(open_filename);
-// glutPostRedisplay();
+  else if (control == OPEN_FILE)
+  {
+    strcpy(open_filename,"../mesh/");
+    strcat(open_filename,open_filetext);
+    strcat(open_filename,".smf");
+  }
+  else if (control == LOAD_MESH)
+  {
+smf.loadFile(open_filename);
+glutPostRedisplay();
 
-//   }
-//   else if (control == output_file)
-//   {
-// strcpy(open_filename,"mesh/");
-//     strcat(open_filename,save_filetext);
-//     strcat(open_filename,".smf")
+  }
+  else if (control == OUTPUT_FILE)
+  {
+  strcpy(open_filename,"../mesh/");
+  strcat(open_filename,save_filetext);
+  strcat(open_filename,".smf");
 
-//   }
+  }
 
-//   else if (control == save_file)
-
-//   {
-// smf_model.save(save_filename)
-//   }
+  else if (control == SAVE_FILE)
+  {
+smf.saveFile(save_filename);
+  }
 
 }
 
@@ -606,6 +818,7 @@ void myGlutDisplay()
   glClearColor( .9f, .9f, .9f, 1.0f );
   glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+
   glMatrixMode( GL_PROJECTION );
   glLoadIdentity();
   glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 15.0 );
@@ -632,7 +845,7 @@ void myGlutDisplay()
 
   if(show_torus){
 
-    glutSolidTorus( .15,.3,16,segments );
+    // glutSolidTorus( .15,.3,16,segments );
     glShadeModel(GL_FLAT);
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
@@ -640,23 +853,33 @@ void myGlutDisplay()
 
         //flat shaded
         case 0 : 
-                glShadeModel(GL_FLAT);
-                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                glPushMatrix();
+                glTranslatef( -.5, 0.0, 0.0 );
+                glMultMatrixf( torus_rotate );
+                glColor3f(0.9f, 0.9f, 0.9f);
+                //subd.display();
+                smf.display();
+                glPopMatrix();
+                std::cout<<"check--------------\n";
+                
                 break;
         //smooth shaded
         case 1 : 
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+                smf.display();
                 break;
         //wireframe
         case 2: 
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                smf.display();
 
                 break;
         //shaded with mesh
         case 3:
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+                smf.display();
 
 
       }
@@ -699,20 +922,29 @@ int main(int argc, char* argv[])
   /****************************************/
   /*   Initialize GLUT and create window  */
   /****************************************/
+  //Smf smf(open_filename);
 
+  std::cout << smf;
+
+  // delete smf;
   glutInit(&argc, argv);
   glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
   glutInitWindowPosition( 50, 50 );
   glutInitWindowSize( 800, 600 );
  
-  main_window = glutCreateWindow( "GLUI Example 5" );
+  main_window = glutCreateWindow( "SMF" );
+
+  
   glutDisplayFunc( myGlutDisplay );
+
   GLUI_Master.set_glutReshapeFunc( myGlutReshape );  
   GLUI_Master.set_glutKeyboardFunc( myGlutKeyboard );
   GLUI_Master.set_glutSpecialFunc( NULL );
   GLUI_Master.set_glutMouseFunc( myGlutMouse );
   glutMotionFunc( myGlutMotion );
 
+  
+  // smf = new Smf(open_filename);
   /****************************************/
   /*       Set up OpenGL lights           */
   /****************************************/
@@ -745,6 +977,8 @@ int main(int argc, char* argv[])
   /*** Create the side subwindow ***/
   glui = GLUI_Master.create_glui_subwindow( main_window, 
               GLUI_SUBWINDOW_RIGHT );
+
+  
 
   // obj_panel = new GLUI_Rollout(glui, "Properties", false );
 
@@ -787,22 +1021,26 @@ int main(int argc, char* argv[])
   // new GLUI_Button( glui, "Hide", HIDE_ID, control_cb );
   // new GLUI_Button( glui, "Show", SHOW_ID, control_cb );
 
-  // new GLUI_EditText(glui, "Open File:", GLUI_EDITTEXT_TEXT, open_filetext,open_file,control_cb);
-  new GLUI_Button(glui, "Load", load_mesh, control_cb);
+  new GLUI_EditText(glui, "Open File:", GLUI_EDITTEXT_TEXT, open_filetext,OPEN_FILE,control_cb);
+  new GLUI_Button(glui, "Load", LOAD_MESH, control_cb);
 
   
-  // new GLUI_EditText(glui, "output File:", GLUI_EDITTEXT_TEXT, save_filetext,output_file,control_cb);
-  new GLUI_Button(glui,"Save", save_file,control_cb);
+  new GLUI_EditText(glui, "output File:", GLUI_EDITTEXT_TEXT, save_filetext,OUTPUT_FILE,control_cb);
+  new GLUI_Button(glui,"Save", SAVE_FILE,control_cb);
 
 new GLUI_StaticText( glui, "" );
 new GLUI_StaticText( glui, "" );
 new GLUI_StaticText( glui, "" );
 new GLUI_StaticText( glui, "" );
+
+
 
   /****** A 'quit' button *****/
 
   
   new GLUI_Button( glui, "Quit", 0,(GLUI_Update_CB)exit );
+
+
 
 
   /**** Link windows to GLUI, and register idle callback ******/
@@ -842,17 +1080,21 @@ new GLUI_StaticText( glui, "" );
 
   new GLUI_Column( glui2, false );
 
-   new GLUI_Column( glui2, false );
+  new GLUI_Column( glui2, false );
+  
 
 
 #if 0
   /**** We register the idle callback with GLUI, *not* with GLUT ****/
   GLUI_Master.set_glutIdleFunc( myGlutIdle );
 #endif
+  
 
   /**** Regular GLUT main loop ****/
   
   glutMainLoop();
+
+  // std::cout << "check:*******************************************\n";
 
   return EXIT_SUCCESS;
 }
