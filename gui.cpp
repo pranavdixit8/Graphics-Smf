@@ -71,15 +71,15 @@ int   light0_enabled = 1;
 int   light1_enabled = 1;
 
 int OPEN_FILE = 1;
-int OUTPUT_FILE=1;
-int LOAD_MESH= 0;
-int SAVE_FILE= 0;
+int OUTPUT_FILE= 2;
+int LOAD_MESH= 3;
+int SAVE_FILE= 4;
 
 char open_filetext[sizeof(GLUI_String)] = "wheel";
-char save_filetext[sizeof(GLUI_String)] = "";
+char save_filetext[sizeof(GLUI_String)] = "test";
 
 char open_filename[] = "../mesh/wheel.smf";
-char save_filename[] = "";
+char save_filename[] = "../mesh/test.smf";
 
 float light0_intensity = 1.0;
 float light1_intensity = .4;
@@ -218,14 +218,14 @@ bool Smf::loadFile(const std::string &file)
 
   if(!ifile){
 
-  std::cout<< " Error occured while opening the file";
+  std::cerr<< " Error occured while opening the file";
 
     return false;
   }
 
   else{
 
-    std::cout<<"clear data5";
+    // std::cout<<"clear data5";
 
     vertices.clear();
     faces.clear();
@@ -325,6 +325,7 @@ return true;
 
 bool Smf::saveFile(const std::string &file){
 
+  std::cout<<" inside save file function";	
 
   std::fstream f;
 
@@ -333,6 +334,9 @@ bool Smf::saveFile(const std::string &file){
   if(f.is_open())
   {
     std::cerr<< "File already exists, Please choose a different name";
+
+    strcpy(save_filetext,"choose diff name");
+
 
     f.close();
   }
@@ -370,86 +374,13 @@ bool Smf::saveFile(const std::string &file){
   }
 
   f.close();
+
+  return true;
 }
 
 
 
-// bool Smf::display(){
 
-//   // glClearColor( .9f, .9f, .9f, 1.0f );
-
-// glBegin(GL_TRIANGLES);
-
-// for(size_t i = 0 ; i< 10; i++){
-
-//   if (faces[i].size() < 3 || vertices[ faces[i][0] ].size() < 3 || vertices[ faces[i][1] ].size() < 3 || vertices[ faces[i][2] ].size() < 3)
-//     {
-//       continue;
-//     }
-
-
-//   for( size_t j = 0 ; j < faces[i].size(); j++){
-
-//     if (vertices[ faces[i][j] ].size() < 3)
-//       {
-//         continue;
-//       }
-
-//     std::vector<GLfloat> normal;
-
-//     // // curr_string = 0;
-//     // std::cout<< "\nvalue:value:"<<face_normals.size()<<"\n";
-
-//     // normal = face_normals[i];
-
-//     //  for (unsigned m=0; m<3 ; ++m)
-//     // {std::cout << ' ' << normal[m];
-//     // std::cout << '\n';
-//     // }
-
-//     switch(curr_string){
-
-//       case 0: 
-//       normal = face_normals[i];
-//       break;
-
-//       default: 
-//       normal = vertex_normals[faces[i][j]];
-//       break;
-//     }
-
-   
-
-//     // normalize it to one
-//       GLfloat length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
-//       for (size_t k = 0; k < 3; ++ k)
-//       {
-//         normal[k] /= length;
-//       }
-//     // glBegin(GL_TRIANGLES);
-//     // glNormal3f(normal[0],normal[1],normal[2]);
-
-//     // glNormal3fv(normal);
-
-//     // std::cout<<"normal0:"<<normal[0]<<"\n";
-
-//     std::cout << "vertices size: "<<vertices.size()<< "faces size: "<<faces.size();
-
-//     glVertex3f(vertices[faces[i][j] - 1][0],vertices[faces[i][j] - 1][1],vertices[faces[i][j] - 1][2]);
-
-  
-//     // glEnd();
-//     // std::cout<<"vertices0:"<<vertices[faces[i][j] - 1][0]<<"\n";
-
-//   }
-
-//   }
-
-// glEnd();
-
-// return true;
-
-// }
 
 bool Smf::display(){
 
@@ -474,15 +405,7 @@ for(size_t i = 0 ; i< faces.size(); i++){
 
     std::vector<GLfloat> normal;
 
-    // // curr_string = 0;
-    // std::cout<< "\nvalue:value:"<<face_normals.size()<<"\n";
-
-    // normal = face_normals[i];
-
-    //  for (unsigned m=0; m<3 ; ++m)
-    // {std::cout << ' ' << normal[m];
-    // std::cout << '\n';
-    // }
+  
 
     switch(curr_string){
 
@@ -497,20 +420,17 @@ for(size_t i = 0 ; i< faces.size(); i++){
 
    
 
-    // normalize it to one
       GLfloat length = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
       for (size_t k = 0; k < 3; ++ k)
       {
         normal[k] /= length;
       }
-    // glBegin(GL_TRIANGLES);
-    // glNormal3f(normal[0],normal[1],normal[2]);
+    
+    glNormal3f(normal[0],normal[1],normal[2]);
 
-    // glNormal3fv(normal);
+  
 
-    // std::cout<<"normal0:"<<normal[0]<<"\n";
-
-    std::cout << "vertices size: "<<vertices.size()<< "faces size: "<<faces.size();
+    // std::cout << "vertices size: "<<vertices.size()<< "faces size: "<<faces.size();
 
     glVertex3f(vertices[faces[i][j] - 1][0],vertices[faces[i][j] - 1][1],vertices[faces[i][j] - 1][2]);
 
@@ -597,6 +517,10 @@ Smf::Smf(const std::string &file){
 void control_cb( int control )
 {
 
+
+std::cout<< "open_file: "<<OPEN_FILE<<"   "<<"save_file: "<<OUTPUT_FILE<<"\n";
+
+std::cout<< "load_file: "<<LOAD_MESH<<"   "<<"save: "<<SAVE_FILE<<"\n";
 if(control == SHADDING_ID){
   switch (curr_string){
 
@@ -604,13 +528,13 @@ if(control == SHADDING_ID){
         case 0 : 
                 glShadeModel(GL_FLAT);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-                smf.display();
+               
                 break;
         //smooth shaded
         case 1 : 
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-                smf.display();
+        
                 break;
         //wireframe
         case 2: 
@@ -691,6 +615,8 @@ if(control == SHADDING_ID){
     strcpy(open_filename,"../mesh/");
     strcat(open_filename,open_filetext);
     strcat(open_filename,".smf");
+
+    std::cout<< "open file name: "<< open_filename<<"\n";
   }
   else if (control == LOAD_MESH)
   {
@@ -700,9 +626,11 @@ glutPostRedisplay();
   }
   else if (control == OUTPUT_FILE)
   {
-  strcpy(open_filename,"../mesh/");
-  strcat(open_filename,save_filetext);
-  strcat(open_filename,".smf");
+  strcpy(save_filename,"../mesh/");
+  strcat(save_filename,save_filetext);
+  strcat(save_filename,".smf");
+
+  std::cout<< "save file name: "<< save_filename<<"\n";
 
   }
 
@@ -860,7 +788,7 @@ void myGlutDisplay()
                 //subd.display();
                 smf.display();
                 glPopMatrix();
-                std::cout<<"check--------------\n";
+                // std::cout<<"check--------------\n";
                 
                 break;
         //smooth shaded
@@ -871,15 +799,49 @@ void myGlutDisplay()
                 break;
         //wireframe
         case 2: 
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                smf.display();
+          
+		//edges
+		glPushMatrix();
+		glTranslatef( -.5, 0.0, 0.0 );
+		glMultMatrixf( torus_rotate );
+		glColorMaterial(GL_FRONT, GL_DIFFUSE);
+		glEnable(GL_COLOR_MATERIAL);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glColor3f(0.9f, 0.9f, 0.9f);
 
-                break;
+		smf.display();
+
+		glColor3f(0.9f, 0.9f, 0.9f);
+		glDisable(GL_COLOR_MATERIAL);
+		glPopMatrix();
+		break;
         //shaded with mesh
         case 3:
-                glShadeModel(GL_SMOOTH);
-                glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-                smf.display();
+             
+		glPushMatrix();
+		glTranslatef( -.5, 0.0, 0.0 );
+		glMultMatrixf( torus_rotate );
+		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+		glColor3f(0.9f, 0.9f, 0.9f);
+
+		smf.display();
+
+		glPopMatrix();
+		//edges
+		glPushMatrix();
+		glTranslatef( -.5, 0.0, 0.0 );
+		glMultMatrixf( torus_rotate );
+		glColorMaterial(GL_FRONT, GL_DIFFUSE);
+		glEnable(GL_COLOR_MATERIAL);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glColor3f(0.0f, 0.0f, 0.0f);
+
+		smf.display();
+
+		glColor3f(0.9f, 0.9f, 0.9f);
+		glDisable(GL_COLOR_MATERIAL);
+		glPopMatrix();
+		break;
 
 
       }
