@@ -22,7 +22,7 @@
 #include <GL/glut.h>
 #endif
 
-//#define _GLIBCXX_USE_CXX11_ABI 0
+
 
 //using namespace std;
 
@@ -32,8 +32,8 @@ class Smf {
 
 private:
 
-  void getEdgeList();
-  std::vector<GLfloat> getNormal(std::vector<size_t> f );
+  void getEdges();
+  std::vector<GLfloat> getFaceNormal(std::vector<size_t> f );
 
 
 public:
@@ -53,13 +53,9 @@ Smf(const std::string &file= std::string());
 
 bool loadFile(const std::string &file);
 bool saveFile(const std::string &file);
-
 bool display();
 
 };
-
-
-
 
 
 float xy_aspect;
@@ -67,9 +63,7 @@ int   last_x, last_y;
 float rotationX = 0.0, rotationY = 0.0;
 
 /** These are the live variables passed into GLUI ***/
-int   wireframe = 0;
 int   obj_type = 1;
-int   segments = 40;
 int   light0_enabled = 1;
 int   light1_enabled = 1;
 
@@ -88,13 +82,11 @@ float light0_intensity = 1.0;
 float light1_intensity = .4;
 int   main_window;
 float scale = 1.0;
-int   show_sphere=1;
-int   show_torus=1;
+int   show_mesh=1;
 int   show_axes = 1;
 int   show_text = 1;
-float sphere_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 float mesh_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
-// float view_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+
 float obj_pos[] = { 0.0, 0.0, 0.0 };
 const char *string_list[] = { "flat shaded", "smooth shaded", "wireframe", "shaded with mesh" };
 int   curr_string = 0;
@@ -137,14 +129,15 @@ GLfloat lights_rotation[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
 
 
-/* 
+/************************************************************************************************************* 
 SMF file handling and loading
 */
 /*
 Smf functions definitions
 
-*/
+**************************************************************************************************************/
 
+//  Operator << is overloaded to check if model is uploaded properly
 
 std::ostream& operator<< (std::ostream& os, const Smf& smf)
 {
@@ -213,6 +206,8 @@ return os;
 
 }
 
+// member function to loadfile into model's data structures
+
 bool Smf::loadFile(const std::string &file)
 
 {
@@ -228,7 +223,6 @@ bool Smf::loadFile(const std::string &file)
 
   else{
 
-    // std::cout<<"clear data5";
 
     vertices.clear();
     faces.clear();
@@ -250,10 +244,8 @@ std::istringstream iss(l.substr(1));
 
 std::vector<GLfloat> vertex(3);
 std::vector<size_t> face(3);
-// std::vector<GLfloat> diff01(3);
-// std::vector<GLfloat> diff12(3);
 std::vector<GLfloat> normal(3);
-// GLfloat length;
+
 
 switch(l[0]){
 
@@ -268,25 +260,8 @@ switch(l[0]){
   iss>> face[0]>>face[1] >>face[2];
   faces.push_back(face);
 
-  // for(int j =0; j<3;j++){
-
-  //   diff01[j] = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
-  //   diff12[j] = vertices[face[2]-1][j]- vertices[face[1]-1][j];
-
-
-  // }
-
-  // normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
-  // normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
-  // normal[2] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
-  // // break;
-
-  // length = std::sqrt(std::pow(normal[0],2)+std::pow(normal[1],2)+std::pow(normal[2],2));
-
-  // for (int i = 0 ; i < 3; i++){
-  //   normal[i]/=length;
-  // }
-  normal = getNormal(face);
+ 
+  normal = getFaceNormal(face);
 
   face_normals.insert(std::make_pair((faces.size()-1),normal));
 
@@ -318,26 +293,69 @@ switch(l[0]){
 
 }
 
+// Normalizing after the vertex_normal vector has been calculated, not needed for display purposes as it is handled later but needed for smf model output
+for (std::map<size_t, std::vector<GLfloat> >::iterator i = vertex_normals.begin(); i != vertex_normals.end(); ++ i)
+	{
+	
+		GLfloat length = std::sqrt((i->second)[0] * (i->second)[0] + (i->second)[1] * (i->second)[1] + (i->second)[2] * (i->second)[2]);
+		for (size_t k = 0; k < 3; ++ k)
+		{
+			(i->second)[k] /= length;
+		}
+	}
+
 ifile.close();
 
-getEdgeList();
+
+getEdges();
 
 return true;
 
 }
 
+//calculate the edges of the model from the loaded data
+void Smf:: getEdges()
+{
 
-std::vector<GLfloat> Smf::getNormal(std::vector<size_t> face){
+  edges.clear();
+
+  for(std::vector<std::vector<size_t>>::iterator i = faces.begin(); i!= faces.end(); i++)
+
+  {
+
+
+      std::vector<size_t>::iterator j =i->begin();
+
+    for(++j; j!= i->end(); j++){
+      
+// as edges are numbered anticlockwise in faces
+      if( *(j-1) < *j){
+
+        edges.insert(std::make_pair(*(j-1),*j));
+
+      }
+    }
+// taking only one edge among the common edges
+      if( i->back()< i-> front())
+      {
+      
+        edges.insert(std::make_pair(i->back(), i->front()));
+
+      }
+
+    }
+
+    return;
+  }
+
+//calculate the face normals of the model from the loaded data, while vertex normals is calculated built in loadFile() function
+std::vector<GLfloat> Smf::getFaceNormal(std::vector<size_t> face){
 
 std::vector<GLfloat> diff01(3);
 std::vector<GLfloat> diff12(3);
 std::vector<GLfloat> normal(3);
 GLfloat length;
 
-	// if(face.size()!=3){
-
-	// 	return;
-	// }
 
  for(int j =0; j<3;j++){
 
@@ -350,7 +368,7 @@ GLfloat length;
   normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
   normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
   normal[2] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
-  // break;
+
 
   length = std::sqrt(std::pow(normal[0],2)+std::pow(normal[1],2)+std::pow(normal[2],2));
 
@@ -362,7 +380,7 @@ GLfloat length;
 
 }
 
-
+// saveFile: to save the model into a file
 bool Smf::saveFile(const std::string &file){
 
   std::cout<<" inside save file function";	
@@ -421,16 +439,14 @@ bool Smf::saveFile(const std::string &file){
 
 
 
-
+//display: to display the mesh onto the screen, the real thing happens here once the data is prepared
 bool Smf::display(){
-
-  // glClearColor( .9f, .9f, .9f, 1.0f );
 
 glBegin(GL_TRIANGLES);
 
 for(size_t i = 0 ; i< faces.size(); i++){
 
-  if (faces[i].size() < 3 || vertices[ faces[i][0] ].size() < 3 || vertices[ faces[i][1] ].size() < 3 || vertices[ faces[i][2] ].size() < 3)
+  if (faces[i].size() < 3) 
     {
       continue;
     }
@@ -448,7 +464,7 @@ for(size_t i = 0 ; i< faces.size(); i++){
   
 
     switch(curr_string){
-
+// handling flat faced model, flat models using face normal even when vertex is shared across faces.
       case 0: 
       normal = face_normals[i];
       break;
@@ -489,45 +505,7 @@ return true;
 }
 
 
-
-
-
-
-void Smf:: getEdgeList()
-{
-
-  edges.clear();
-
-  for(std::vector<std::vector<size_t>>::iterator i = faces.begin(); i!= faces.end(); i++)
-
-  {
-
-
-      std::vector<size_t>::iterator j =i->begin();
-
-    for(++j; j!= i->end(); j++){
-      
-
-      if( *(j-1) < *j){
-
-        edges.insert(std::make_pair(*(j-1),*j));
-
-      }
-    }
-
-      if( i->back()< i-> front())
-      {
-      
-        edges.insert(std::make_pair(i->back(), i->front()));
-
-      }
-
-    }
-
-    return;
-  }
-
-
+//Constructor function
 
 Smf::Smf(const std::string &file){
 
@@ -542,11 +520,11 @@ Smf::Smf(const std::string &file){
 
 
 
-
+/********************************************************************************************************
 /* End of Smf class definitions and functions
 
 
-*/
+**********************************************************************************************************/
 
 
 
@@ -583,6 +561,7 @@ if(control == SHADDING_ID){
                 break;
         //shaded with mesh
         case 3:
+        std::cout<<"print 1\n";
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
                 
@@ -800,7 +779,7 @@ void myGlutDisplay()
   glLoadIdentity();
   glTranslatef( 0.0, 0.0, -2.6f );
   glTranslatef( obj_pos[0], obj_pos[1], -obj_pos[2] ); 
-  // glMultMatrixf( view_rotate );
+ 
 
   glScalef( scale, scale, scale );
 
@@ -811,11 +790,10 @@ void myGlutDisplay()
   glTranslatef( 0.0, -0.25, 0.0 );
   glMultMatrixf( mesh_rotate );
 
-  if(show_torus){
+  if(show_mesh){
 
     // glutSolidTorus( .15,.3,16,segments );
-    glShadeModel(GL_FLAT);
-    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+   
 
      switch (curr_string){
 
@@ -825,10 +803,11 @@ void myGlutDisplay()
                 glTranslatef( -.5, 0.0, 0.0 );
                 glMultMatrixf( mesh_rotate );
                 glColor3f(0.9f, 0.9f, 0.9f);
-                //subd.display();
+                glShadeModel(GL_FLAT);
+    			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
                 smf.display();
                 glPopMatrix();
-                // std::cout<<"check--------------\n";
+                // std::cout<<"check-------flat shaded-------\n";
                 
                 break;
         //smooth shaded
@@ -836,26 +815,25 @@ void myGlutDisplay()
         		glPushMatrix();
                 glTranslatef( -.5, 0.0, 0.0 );
                 glMultMatrixf( mesh_rotate );
+                glColor3f(0.9f, 0.9f, 0.9f);
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
                 smf.display();
                 glPopMatrix();
+                // std::cout<<"check-------smooth shaded-------\n";
                 break;
         //wireframe
         case 2: 
           
-		//edges
 		glPushMatrix();
 		glTranslatef( -.5, 0.0, 0.0 );
 		glMultMatrixf( mesh_rotate );
 		glColorMaterial(GL_FRONT, GL_DIFFUSE);
 		glEnable(GL_COLOR_MATERIAL);
+		glColor3f(0.9f, 0.9f, 0.9f);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glColor3f(0.9f, 0.9f, 0.9f);
-
 		smf.display();
-
-		glColor3f(0.9f, 0.9f, 0.9f);
+		// std::cout<<"check-------wireframe-------\n";
 		glDisable(GL_COLOR_MATERIAL);
 		glPopMatrix();
 		break;
@@ -867,11 +845,10 @@ void myGlutDisplay()
 		glMultMatrixf( mesh_rotate );
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		glColor3f(0.9f, 0.9f, 0.9f);
-
 		smf.display();
-
+		// std::cout<<"print 2\n";
+		// std::cout<<"check-------mesh and  shaded-------\n";
 		glPopMatrix();
-		//edges
 		glPushMatrix();
 		glTranslatef( -.5, 0.0, 0.0 );
 		glMultMatrixf( mesh_rotate );
@@ -879,12 +856,11 @@ void myGlutDisplay()
 		glEnable(GL_COLOR_MATERIAL);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glColor3f(0.0f, 0.0f, 0.0f);
-
 		smf.display();
-
 		glColor3f(0.9f, 0.9f, 0.9f);
 		glDisable(GL_COLOR_MATERIAL);
 		glPopMatrix();
+		
 		break;
 
 
@@ -928,11 +904,11 @@ int main(int argc, char* argv[])
   /****************************************/
   /*   Initialize GLUT and create window  */
   /****************************************/
-  //Smf smf(open_filename);
+ 
 
-  // std::cout << smf;
+  std::cout << smf;
 
-  // delete smf;
+
   glutInit(&argc, argv);
   glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
   glutInitWindowPosition( 50, 50 );
@@ -950,7 +926,7 @@ int main(int argc, char* argv[])
   glutMotionFunc( myGlutMotion );
 
   
-  // smf = new Smf(open_filename);
+ 
   /****************************************/
   /*       Set up OpenGL lights           */
   /****************************************/
@@ -984,30 +960,9 @@ int main(int argc, char* argv[])
   glui = GLUI_Master.create_glui_subwindow( main_window, 
               GLUI_SUBWINDOW_RIGHT );
 
-  
-
-  // obj_panel = new GLUI_Rollout(glui, "Properties", false );
-
-  /***** Control for object params *****/
-
-  // new GLUI_Checkbox( glui, "Wireframe", &wireframe, 1, control_cb );
-  // GLUI_Spinner *spinner = 
-  //   new GLUI_Spinner( glui, "Segments:", &segments);
-  // spinner->set_int_limits( 3, 60 );
-  // spinner->set_alignment( GLUI_ALIGN_RIGHT );
-
-  // GLUI_Spinner *scale_spinner = 
-  //   new GLUI_Spinner( glui, "Scale:", &scale);
-  // scale_spinner->set_float_limits( .2f, 4.0 );
-  // scale_spinner->set_alignment( GLUI_ALIGN_RIGHT );
-
-
-
-
   // /*** Add another rollout ***/
   GLUI_Rollout *options = new GLUI_Rollout(glui, "Options", false );
-  // new GLUI_Checkbox( options, "Draw sphere", &show_sphere );
-  new GLUI_Checkbox( options, "Show mesh", &show_torus );
+  new GLUI_Checkbox( options, "Show mesh", &show_mesh );
   new GLUI_Checkbox( options, "Show axes", &show_axes );
   new GLUI_Checkbox( options, "Show text", &show_text );
 
@@ -1020,12 +975,6 @@ int main(int argc, char* argv[])
 
   new GLUI_StaticText( glui, "" );
 
-
-  /*** Disable/Enable buttons ***/
-  // new GLUI_Button( glui, "Disable movement", DISABLE_ID, control_cb );
-  // new GLUI_Button( glui, "Enable movement", ENABLE_ID, control_cb );
-  // new GLUI_Button( glui, "Hide", HIDE_ID, control_cb );
-  // new GLUI_Button( glui, "Show", SHOW_ID, control_cb );
 
   new GLUI_EditText(glui, "Open File:", GLUI_EDITTEXT_TEXT, open_filetext,OPEN_FILE,control_cb);
   new GLUI_Button(glui, "Load", LOAD_MESH, control_cb);
@@ -1059,9 +1008,6 @@ new GLUI_StaticText( glui, "" );
                                              GLUI_SUBWINDOW_BOTTOM );
   glui2->set_main_gfx_window( main_window );
 
-  // GLUI_Rotation *view_rot = new GLUI_Rotation(glui2, "Objects", view_rotate );
-  // view_rot->set_spin( 1.0 );
-  // new GLUI_Column( glui2, false );
 
   GLUI_Rotation *tor_rot = new GLUI_Rotation(glui2, "Mesh", mesh_rotate );
   tor_rot->set_spin( .98 );
@@ -1100,7 +1046,7 @@ new GLUI_StaticText( glui, "" );
   
   glutMainLoop();
 
-  // std::cout << "check:*******************************************\n";
+
 
   return EXIT_SUCCESS;
 }
