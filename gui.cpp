@@ -536,9 +536,9 @@ void control_cb( int control )
 {
 
 
-std::cout<< "open_file: "<<OPEN_FILE<<"   "<<"save_file: "<<OUTPUT_FILE<<"\n";
+// std::cout<< "open_file: "<<OPEN_FILE<<"   "<<"save_file: "<<OUTPUT_FILE<<"\n";
 
-std::cout<< "load_file: "<<LOAD_MESH<<"   "<<"save: "<<SAVE_FILE<<"\n";
+// std::cout<< "load_file: "<<LOAD_MESH<<"   "<<"save: "<<SAVE_FILE<<"\n";
 if(control == SHADDING_ID){
   switch (curr_string){
 
@@ -635,7 +635,7 @@ if(control == SHADDING_ID){
     strcat(open_filename,open_filetext);
     strcat(open_filename,".smf");
 
-    std::cout<< "open file name: "<< open_filename<<"\n";
+    // std::cout<< "open file name: "<< open_filename<<"\n";
   }
   else if (control == LOAD_MESH)
   {
@@ -649,7 +649,7 @@ glutPostRedisplay();
   strcat(save_filename,save_filetext);
   strcat(save_filename,".smf");
 
-  std::cout<< "save file name: "<< save_filename<<"\n";
+  // std::cout<< "save file name: "<< save_filename<<"\n";
 
   }
 
