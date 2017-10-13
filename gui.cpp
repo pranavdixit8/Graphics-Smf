@@ -33,6 +33,7 @@ class Smf {
 private:
 
   void getEdgeList();
+  std::vector<GLfloat> getNormal(std::vector<size_t> f );
 
 
 public:
@@ -249,10 +250,10 @@ std::istringstream iss(l.substr(1));
 
 std::vector<GLfloat> vertex(3);
 std::vector<size_t> face(3);
-std::vector<GLfloat> diff01(3);
-std::vector<GLfloat> diff12(3);
+// std::vector<GLfloat> diff01(3);
+// std::vector<GLfloat> diff12(3);
 std::vector<GLfloat> normal(3);
-GLfloat length;
+// GLfloat length;
 
 switch(l[0]){
 
@@ -267,25 +268,26 @@ switch(l[0]){
   iss>> face[0]>>face[1] >>face[2];
   faces.push_back(face);
 
-  for(int j =0; j<3;j++){
+  // for(int j =0; j<3;j++){
 
-    diff01[j] = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
-    diff12[j] = vertices[face[2]-1][j]- vertices[face[1]-1][j];
+  //   diff01[j] = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
+  //   diff12[j] = vertices[face[2]-1][j]- vertices[face[1]-1][j];
 
 
-  }
+  // }
 
-  normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
-  normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
-  normal[2] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
-  // break;
+  // normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
+  // normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
+  // normal[2] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
+  // // break;
 
-  length = std::sqrt(std::pow(normal[0],2)+std::pow(normal[1],2)+std::pow(normal[2],2));
+  // length = std::sqrt(std::pow(normal[0],2)+std::pow(normal[1],2)+std::pow(normal[2],2));
 
-  for (int i = 0 ; i < 3; i++){
-    normal[i]/=length;
-  }
- 
+  // for (int i = 0 ; i < 3; i++){
+  //   normal[i]/=length;
+  // }
+  normal = getNormal(face);
+
   face_normals.insert(std::make_pair((faces.size()-1),normal));
 
 
@@ -321,6 +323,42 @@ ifile.close();
 getEdgeList();
 
 return true;
+
+}
+
+
+std::vector<GLfloat> Smf::getNormal(std::vector<size_t> face){
+
+std::vector<GLfloat> diff01(3);
+std::vector<GLfloat> diff12(3);
+std::vector<GLfloat> normal(3);
+GLfloat length;
+
+	// if(face.size()!=3){
+
+	// 	return;
+	// }
+
+ for(int j =0; j<3;j++){
+
+    diff01[j] = vertices[face[1]- 1][j] - vertices[face[0]-1][j];
+    diff12[j] = vertices[face[2]-1][j]- vertices[face[1]-1][j];
+
+
+  }
+
+  normal[0] = diff01[1]*diff12[2]- diff01[2]*diff12[1];
+  normal[1] = diff01[2]*diff12[0]- diff01[0]*diff12[2];
+  normal[2] = diff01[0]*diff12[1]- diff01[1]*diff12[0];
+  // break;
+
+  length = std::sqrt(std::pow(normal[0],2)+std::pow(normal[1],2)+std::pow(normal[2],2));
+
+  for (int i = 0 ; i < 3; i++){
+    normal[i]/=length;
+  }
+
+  return normal;
 
 }
 
