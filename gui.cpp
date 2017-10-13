@@ -26,6 +26,8 @@
 
 //using namespace std;
 
+
+
 class Smf {
 
 private:
@@ -90,8 +92,8 @@ int   show_torus=1;
 int   show_axes = 1;
 int   show_text = 1;
 float sphere_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
-float torus_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
-float view_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+float mesh_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+// float view_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 float obj_pos[] = { 0.0, 0.0, 0.0 };
 const char *string_list[] = { "flat shaded", "smooth shaded", "wireframe", "shaded with mesh" };
 int   curr_string = 0;
@@ -760,7 +762,7 @@ void myGlutDisplay()
   glLoadIdentity();
   glTranslatef( 0.0, 0.0, -2.6f );
   glTranslatef( obj_pos[0], obj_pos[1], -obj_pos[2] ); 
-  glMultMatrixf( view_rotate );
+  // glMultMatrixf( view_rotate );
 
   glScalef( scale, scale, scale );
 
@@ -769,7 +771,7 @@ void myGlutDisplay()
 
   glPushMatrix();
   glTranslatef( 0.0, -0.25, 0.0 );
-  glMultMatrixf( torus_rotate );
+  glMultMatrixf( mesh_rotate );
 
   if(show_torus){
 
@@ -783,7 +785,7 @@ void myGlutDisplay()
         case 0 : 
                 glPushMatrix();
                 glTranslatef( -.5, 0.0, 0.0 );
-                glMultMatrixf( torus_rotate );
+                glMultMatrixf( mesh_rotate );
                 glColor3f(0.9f, 0.9f, 0.9f);
                 //subd.display();
                 smf.display();
@@ -793,9 +795,13 @@ void myGlutDisplay()
                 break;
         //smooth shaded
         case 1 : 
+        		glPushMatrix();
+                glTranslatef( -.5, 0.0, 0.0 );
+                glMultMatrixf( mesh_rotate );
                 glShadeModel(GL_SMOOTH);
                 glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
                 smf.display();
+                glPopMatrix();
                 break;
         //wireframe
         case 2: 
@@ -803,7 +809,7 @@ void myGlutDisplay()
 		//edges
 		glPushMatrix();
 		glTranslatef( -.5, 0.0, 0.0 );
-		glMultMatrixf( torus_rotate );
+		glMultMatrixf( mesh_rotate );
 		glColorMaterial(GL_FRONT, GL_DIFFUSE);
 		glEnable(GL_COLOR_MATERIAL);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -820,7 +826,7 @@ void myGlutDisplay()
              
 		glPushMatrix();
 		glTranslatef( -.5, 0.0, 0.0 );
-		glMultMatrixf( torus_rotate );
+		glMultMatrixf( mesh_rotate );
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 		glColor3f(0.9f, 0.9f, 0.9f);
 
@@ -830,7 +836,7 @@ void myGlutDisplay()
 		//edges
 		glPushMatrix();
 		glTranslatef( -.5, 0.0, 0.0 );
-		glMultMatrixf( torus_rotate );
+		glMultMatrixf( mesh_rotate );
 		glColorMaterial(GL_FRONT, GL_DIFFUSE);
 		glEnable(GL_COLOR_MATERIAL);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -886,7 +892,7 @@ int main(int argc, char* argv[])
   /****************************************/
   //Smf smf(open_filename);
 
-  std::cout << smf;
+  // std::cout << smf;
 
   // delete smf;
   glutInit(&argc, argv);
@@ -947,25 +953,25 @@ int main(int argc, char* argv[])
   /***** Control for object params *****/
 
   // new GLUI_Checkbox( glui, "Wireframe", &wireframe, 1, control_cb );
-  GLUI_Spinner *spinner = 
-    new GLUI_Spinner( glui, "Segments:", &segments);
-  spinner->set_int_limits( 3, 60 );
-  spinner->set_alignment( GLUI_ALIGN_RIGHT );
+  // GLUI_Spinner *spinner = 
+  //   new GLUI_Spinner( glui, "Segments:", &segments);
+  // spinner->set_int_limits( 3, 60 );
+  // spinner->set_alignment( GLUI_ALIGN_RIGHT );
 
-  GLUI_Spinner *scale_spinner = 
-    new GLUI_Spinner( glui, "Scale:", &scale);
-  scale_spinner->set_float_limits( .2f, 4.0 );
-  scale_spinner->set_alignment( GLUI_ALIGN_RIGHT );
+  // GLUI_Spinner *scale_spinner = 
+  //   new GLUI_Spinner( glui, "Scale:", &scale);
+  // scale_spinner->set_float_limits( .2f, 4.0 );
+  // scale_spinner->set_alignment( GLUI_ALIGN_RIGHT );
 
 
 
 
   // /*** Add another rollout ***/
-  GLUI_Rollout *options = new GLUI_Rollout(glui, "Options", true );
+  GLUI_Rollout *options = new GLUI_Rollout(glui, "Options", false );
   // new GLUI_Checkbox( options, "Draw sphere", &show_sphere );
-  new GLUI_Checkbox( options, "Show torus", &show_torus );
-  new GLUI_Checkbox( options, "Draw axes", &show_axes );
-  new GLUI_Checkbox( options, "Draw text", &show_text );
+  new GLUI_Checkbox( options, "Show mesh", &show_torus );
+  new GLUI_Checkbox( options, "Show axes", &show_axes );
+  new GLUI_Checkbox( options, "Show text", &show_text );
 
   /**** Add listbox ****/
   new GLUI_StaticText( glui, "" );
@@ -987,7 +993,7 @@ int main(int argc, char* argv[])
   new GLUI_Button(glui, "Load", LOAD_MESH, control_cb);
 
   
-  new GLUI_EditText(glui, "output File:", GLUI_EDITTEXT_TEXT, save_filetext,OUTPUT_FILE,control_cb);
+  new GLUI_EditText(glui, "Output File:", GLUI_EDITTEXT_TEXT, save_filetext,OUTPUT_FILE,control_cb);
   new GLUI_Button(glui,"Save", SAVE_FILE,control_cb);
 
 new GLUI_StaticText( glui, "" );
@@ -1015,11 +1021,11 @@ new GLUI_StaticText( glui, "" );
                                              GLUI_SUBWINDOW_BOTTOM );
   glui2->set_main_gfx_window( main_window );
 
-  GLUI_Rotation *view_rot = new GLUI_Rotation(glui2, "Objects", view_rotate );
-  view_rot->set_spin( 1.0 );
-  new GLUI_Column( glui2, false );
+  // GLUI_Rotation *view_rot = new GLUI_Rotation(glui2, "Objects", view_rotate );
+  // view_rot->set_spin( 1.0 );
+  // new GLUI_Column( glui2, false );
 
-  GLUI_Rotation *tor_rot = new GLUI_Rotation(glui2, "Torus", torus_rotate );
+  GLUI_Rotation *tor_rot = new GLUI_Rotation(glui2, "Mesh", mesh_rotate );
   tor_rot->set_spin( .98 );
   new GLUI_Column( glui2, false );
 
